@@ -40,7 +40,7 @@ jobs:
       - name: Upload index.html as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: html-reports
+          name: html-report-${{ matrix.ruby-version }}
           path: reports/${{ matrix.ruby-version }}/index.html
 
   publish:
@@ -53,12 +53,7 @@ jobs:
       - name: Download HTML reports
         uses: actions/download-artifact@v4
         with:
-          name: html-reports
           path: all_html_reports
-      - name: Generate listing page for all versions
-        run: |
-          ruby scripts/generate_listing_page.rb all_html_reports index.html
-          touch .nojekyll
       - name: Prepare gh-pages branch
         run: |
           git config user.name "github-actions"
@@ -66,8 +61,7 @@ jobs:
           git fetch origin gh-pages || git checkout --orphan gh-pages
           git checkout gh-pages || git checkout --orphan gh-pages
           rm -rf *
-          cp all_html_reports/*/index.html ./
-          cp index.html ./
+          cp all_html_reports/*.html ./
           touch .nojekyll
       - name: Commit and push HTML pages
         run: |
