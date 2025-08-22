@@ -33,7 +33,7 @@ jobs:
         run: bundle install
       - name: Run benchmarks
         run: bundle exec rake
-      - name: Generate HTML page for all versions
+      - name: Generate Markdown page for all versions
         run: bundle exec rake generate_versions_html
 
   publish:
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Copy generated HTML page
+      - name: Copy generated Markdown page
         run: |
           cp all_versions_benchmarks.html ./
           touch .nojekyll
@@ -56,7 +56,7 @@ jobs:
           rm -rf *
           cp all_versions_benchmarks.html ./
           touch .nojekyll
-      - name: Commit and push HTML page
+      - name: Commit and push Markdown page
         run: |
           git add .
           git commit -m "Update all versions benchmark HTML [ci skip]" || echo "No changes to commit"
