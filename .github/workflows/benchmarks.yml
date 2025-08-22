@@ -33,8 +33,19 @@ jobs:
         run: bundle install
       - name: Run benchmarks
         run: bundle exec rake
-      - name: Generate Markdown page for all versions
-        run: bundle exec rake generate_versions_html
+      - name: Generate HTML files for each benchmark
+        run: |
+          for v in $(ls reports); do
+            mkdir -p html_reports/$v
+            for f in $(ls reports/$v/*.txt); do
+              ruby scripts/generate_benchmarks_html.rb "$f" "html_reports/$v/$(basename $f .txt).html"
+            done
+          done
+      - name: Upload HTML reports as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-reports
+          path: html_reports/**/*
 
   publish:
     needs: rake
@@ -43,9 +54,14 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Copy generated Markdown page
+      - name: Download HTML reports
+        uses: actions/download-artifact@v4
+        with:
+          name: html-reports
+          path: all_html_reports
+      - name: Merge all HTML files into one
         run: |
-          cp all_versions_benchmarks.html ./
+          ruby scripts/merge_html_reports.rb all_html_reports merged_benchmarks.html
           touch .nojekyll
       - name: Prepare gh-pages branch
         run: |
@@ -54,10 +70,10 @@ jobs:
           git fetch origin gh-pages || git checkout --orphan gh-pages
           git checkout gh-pages || git checkout --orphan gh-pages
           rm -rf *
-          cp all_versions_benchmarks.html ./
+          cp merged_benchmarks.html ./
           touch .nojekyll
-      - name: Commit and push Markdown page
+      - name: Commit and push merged HTML page
         run: |
           git add .
-          git commit -m "Update all versions benchmark HTML [ci skip]" || echo "No changes to commit"
+          git commit -m "Update merged benchmark HTML [ci skip]" || echo "No changes to commit"
           git push origin gh-pages
