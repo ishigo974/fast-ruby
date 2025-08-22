@@ -5,28 +5,29 @@ end
 desc "run benchmark in current ruby"
 task :run_benchmark do
   require 'fileutils'
-  if ENV['CI'] == '1'
-    FileUtils.mkdir_p("reports/#{RUBY_VERSION}")
-  end
+  FileUtils.mkdir_p("reports/#{RUBY_VERSION}") if ENV['CI'] == '1'
 
   benchmarks = Dir["code/*/*.rb"].sort_by { |path| path =~ /^code\/general/ ? 0 : 1 }
 
   if ENV['CI'] == '1'
-    # Use GNU parallel if available, else fallback to Ruby threads
-    parallel_cmd = "parallel --will-cite --halt soon,fail=1 --jobs $(( $(nproc) )) 'ruby -v -W0 {} > reports/#{RUBY_VERSION}/{/.}.txt' ::: #{benchmarks.join(' ')}"
-    if system('which parallel > /dev/null')
-      puts "Running benchmarks in parallel with GNU parallel"
-      system(parallel_cmd)
-    else
-      puts "GNU parallel not found, running benchmarks in Ruby threads"
-      threads = benchmarks.map do |benchmark|
-        Thread.new do
-          out_file = "reports/#{RUBY_VERSION}/#{File.basename(benchmark, '.rb')}.txt"
-          system("ruby -v -W0 #{benchmark} > #{out_file}")
+    # Always use Ruby threads for parallel execution
+    require 'thread'
+    total = benchmarks.size
+    done = 0
+    mutex = Mutex.new
+    threads = benchmarks.map do |benchmark|
+      Thread.new do
+        out_file = "reports/#{RUBY_VERSION}/#{File.basename(benchmark, '.rb')}.txt"
+        system("ruby -v -W0 #{benchmark} > #{out_file}")
+        mutex.synchronize do
+          done += 1
+          print "\rProgress: #{done}/#{total} benchmarks completed"
+          $stdout.flush
         end
       end
-      threads.each(&:join)
     end
+    threads.each(&:join)
+    puts "\nAll benchmarks completed."
   else
     benchmarks.each do |benchmark|
       puts "$ ruby -v #{benchmark}"
