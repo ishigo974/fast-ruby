@@ -33,6 +33,10 @@ jobs:
         run: bundle install
       - name: Run benchmarks
         run: bundle exec rake
+      - name: List benchmark output files
+        run: |
+          ls -lh reports/${{ matrix.ruby-version }}
+          cat reports/${{ matrix.ruby-version }}/*.txt || true
       - name: Generate index.html for current Ruby version
         run: |
           v=${{ matrix.ruby-version }}
