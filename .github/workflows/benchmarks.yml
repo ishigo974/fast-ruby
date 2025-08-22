@@ -33,19 +33,15 @@ jobs:
         run: bundle install
       - name: Run benchmarks
         run: bundle exec rake
-      - name: Generate HTML files for each benchmark
+      - name: Generate index.html for current Ruby version
         run: |
-          for v in $(ls reports); do
-            mkdir -p html_reports/$v
-            for f in $(ls reports/$v/*.txt); do
-              ruby scripts/generate_benchmarks_html.rb "$f" "html_reports/$v/$(basename $f .txt).html"
-            done
-          done
-      - name: Upload HTML reports as artifacts
+          v=${{ matrix.ruby-version }}
+          ruby scripts/merge_html_reports.rb $v
+      - name: Upload index.html as artifact
         uses: actions/upload-artifact@v4
         with:
           name: html-reports
-          path: html_reports/**/*
+          path: reports/${{ matrix.ruby-version }}/index.html
 
   publish:
     needs: rake
@@ -59,9 +55,9 @@ jobs:
         with:
           name: html-reports
           path: all_html_reports
-      - name: Merge all HTML files into one
+      - name: Generate listing page for all versions
         run: |
-          ruby scripts/merge_html_reports.rb all_html_reports merged_benchmarks.html
+          ruby scripts/generate_listing_page.rb all_html_reports index.html
           touch .nojekyll
       - name: Prepare gh-pages branch
         run: |
@@ -70,10 +66,11 @@ jobs:
           git fetch origin gh-pages || git checkout --orphan gh-pages
           git checkout gh-pages || git checkout --orphan gh-pages
           rm -rf *
-          cp merged_benchmarks.html ./
+          cp all_html_reports/*/index.html ./
+          cp index.html ./
           touch .nojekyll
-      - name: Commit and push merged HTML page
+      - name: Commit and push HTML pages
         run: |
           git add .
-          git commit -m "Update merged benchmark HTML [ci skip]" || echo "No changes to commit"
+          git commit -m "Update benchmark HTML pages [ci skip]" || echo "No changes to commit"
           git push origin gh-pages

@@ -1,7 +1,3 @@
-task :generate_versions_html do
-  ruby_script = File.expand_path('scripts/generate_versions_html.rb', Dir.pwd)
-  sh "ruby #{ruby_script}"
-end
 desc "run benchmark in current ruby"
 task :run_benchmark do
   require 'fileutils'

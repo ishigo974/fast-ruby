@@ -4,18 +4,21 @@
 require 'find'
 require 'pathname'
 
-input_dir = ARGV[0] || 'all_html_reports'
-output = ARGV[1] || 'merged_benchmarks.html'
 
-html_files = []
-Find.find(input_dir) do |path|
-  html_files << path if path =~ /\.html$/
-end
+# Usage: ruby scripts/merge_html_reports.rb <ruby_version>
+version = ARGV[0] or abort("Usage: ruby scripts/merge_html_reports.rb <ruby_version>")
+input_dir = File.join('reports', version)
 
-blocks = html_files.sort.map do |file|
-  name = Pathname(file).each_filename.to_a[-2..-1].join(' / ')
+output = File.join(input_dir, 'index.html')
+require 'fileutils'
+FileUtils.mkdir_p(input_dir)
+
+txt_files = Dir[File.join(input_dir, '*.txt')].sort
+
+blocks = txt_files.map do |file|
+  name = File.basename(file, '.txt')
   content = File.read(file)
-  "<details><summary>#{name}</summary>\n#{content}\n</details>"
+  "<details><summary>#{name}</summary>\n<pre>#{content}</pre>\n</details>"
 end
 
 page = <<-HTML
@@ -23,7 +26,7 @@ page = <<-HTML
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>All Ruby Benchmarks</title>
+  <title>Ruby Benchmarks for #{version}</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 2em; }
     details { margin-bottom: 1em; }
@@ -32,7 +35,7 @@ page = <<-HTML
   </style>
 </head>
 <body>
-  <h1>All Ruby Benchmarks</h1>
+  <h1>Ruby Benchmarks for #{version}</h1>
   #{blocks.join("\n\n")}
 </body>
 </html>
